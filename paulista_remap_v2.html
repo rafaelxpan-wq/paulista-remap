@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paulista Remap Chip — Reprogramação Eletrônica para Todos os Veículos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Barlow:ital,wght@0,300;0,400;0,600;0,700;0,900;1,700;1,900&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #CC0014;
+  --red2: #E8001C;
+  --red-dim: rgba(204,0,20,0.15);
+  --black: #050505;
+  --black2: #0c0c0c;
+  --black3: #131313;
+  --black4: #1a1a1a;
+  --white: #FFFFFF;
+  --off-white: #E8E8E8;
+  --gray: #777;
+  --gray2: #aaa;
+  --border: rgba(255,255,255,0.06);
+  --border-red: rgba(204,0,20,0.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Barlow', sans-serif;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ─── CUSTOM CURSOR ─── */
+body { cursor: none; }
+.cursor {
+  width: 12px; height: 12px;
+  background: var(--red2);
+  border-radius: 50%;
+  position: fixed; pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: transform .1s, width .2s, height .2s;
+  mix-blend-mode: difference;
+}
+
+/* ─── NOISE ─── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity: .5;
+}
+
+/* ─── LOGO SVG COMPONENT ─── */
+.logo-svg-wrap { display: flex; align-items: center; gap: 0; }
+
+.logo-chess {
+  width: 52px; height: 52px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 2px; flex-shrink: 0;
+}
+.lc { width: 100%; height: 100%; }
+.lc.r  { background: var(--red2); }
+.lc.b  { background: #000; }
+.lc.e  { background: transparent; }
+
+/* Chess pattern matching logo:
+   Row1: red, empty, empty
+   Row2: red, red,   empty
+   Row3: empty, red, red    → forms a P shape
+*/
+
+.logo-text-wrap {
+  display: flex; flex-direction: column;
+  margin-left: 10px; line-height: .95;
+}
+.logo-paulista {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 28px; letter-spacing: 1px;
+  color: var(--white);
+  text-transform: uppercase;
+}
+.logo-remap {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: normal; font-weight: 700;
+  font-size: 11px; letter-spacing: 3px;
+  color: var(--gray2);
+  text-transform: uppercase;
+}
+.logo-remap span { color: var(--red2); }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 56px;
+  height: 72px;
+  background: rgba(5,5,5,0.92);
+  backdrop-filter: blur(20px) saturate(1.5);
+  border-bottom: 1px solid var(--border);
+}
+.nav-links {
+  display: flex; gap: 40px; list-style: none;
+}
+.nav-links a {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--gray); text-decoration: none;
+  transition: color .2s;
+  position: relative;
+}
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1px; background: var(--red2);
+  transition: width .25s;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-links a:hover::after { width: 100%; }
+
+.nav-cta {
+  background: var(--red2);
+  color: var(--white);
+  padding: 11px 28px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; text-decoration: none;
+  border: none; cursor: none;
+  transition: background .2s, transform .15s;
+  display: inline-block;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.nav-cta:hover { background: #FF0020; transform: translateY(-1px); }
+
+/* ─── HERO ─── */
+#hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 100px 56px 80px;
+  position: relative; overflow: hidden;
+}
+
+.hero-bg-text {
+  position: absolute;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 32vw;
+  color: rgba(204,0,20,0.04);
+  white-space: nowrap;
+  top: 50%; left: -2%;
+  transform: translateY(-50%);
+  pointer-events: none; user-select: none;
+  letter-spacing: -5px; line-height: 1;
+}
+
+.hero-scan {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(255,255,255,0.008) 3px,
+    rgba(255,255,255,0.008) 4px
+  );
+  pointer-events: none;
+}
+
+.hero-left { position: relative; z-index: 2; }
+
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--red2);
+  margin-bottom: 28px;
+}
+.hero-kicker::before {
+  content: '';
+  display: block; width: 32px; height: 2px; background: var(--red2);
+}
+
+h1.hero-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: clamp(64px, 7.5vw, 120px);
+  line-height: .88;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+h1.hero-title .line-red { color: var(--red2); }
+h1.hero-title .line-stroke {
+  -webkit-text-stroke: 1.5px rgba(255,255,255,0.25);
+  color: transparent;
+}
+
+.hero-sub {
+  font-size: 17px; font-weight: 300;
+  color: var(--gray2); line-height: 1.7;
+  max-width: 440px; margin-bottom: 44px;
+}
+.hero-sub strong { color: var(--white); font-weight: 600; }
+
+.hero-btns { display: flex; gap: 14px; align-items: center; }
+
+.btn-red {
+  background: var(--red2); color: var(--white);
+  padding: 16px 36px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 10px;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  transition: background .2s, transform .15s;
+}
+.btn-red:hover { background: #FF0020; transform: translateY(-2px); }
+.btn-red svg { transition: transform .2s; }
+.btn-red:hover svg { transform: translateX(4px); }
+
+.btn-outline {
+  color: var(--white); padding: 15px 28px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 600; letter-spacing: 2px;
+  text-transform: uppercase; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: border-color .2s;
+}
+.btn-outline:hover { border-color: rgba(255,255,255,0.4); }
+
+/* Hero right — segments pill grid */
+.hero-right {
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-end;
+  gap: 16px; position: relative; z-index: 2;
+}
+
+.hero-stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 3px; width: 100%; max-width: 380px;
+}
+.hero-stat {
+  background: var(--black3);
+  border: 1px solid var(--border);
+  padding: 28px 24px;
+  position: relative; overflow: hidden;
+}
+.hero-stat::before {
+  content: '';
+  position: absolute; top: 0; left: 0;
+  width: 3px; height: 100%; background: var(--red2);
+}
+.hero-stat-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 44px; color: var(--white); line-height: 1;
+}
+.hero-stat-num em { color: var(--red2); font-style: normal; }
+.hero-stat-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--gray);
+  margin-top: 4px;
+}
+
+/* ─── TICKER ─── */
+.ticker {
+  background: var(--red2);
+  padding: 13px 0; overflow: hidden; white-space: nowrap;
+  position: relative; z-index: 1;
+}
+.ticker-track {
+  display: inline-flex;
+  animation: tickerRun 30s linear infinite;
+}
+@keyframes tickerRun { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.tick {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: rgba(255,255,255,0.95);
+  padding: 0 32px; display: inline-flex; align-items: center; gap: 16px;
+}
+.tick::after { content: '////'; opacity: .5; font-size: 10px; }
+
+/* ─── SHARED SECTION STYLES ─── */
+.s-tag {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 5px;
+  text-transform: uppercase; color: var(--red2);
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 14px;
+}
+.s-tag::before { content: ''; width: 28px; height: 2px; background: var(--red2); }
+
+h2.s-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: clamp(44px, 5vw, 72px);
+  line-height: .9; text-transform: uppercase;
+  letter-spacing: -1px;
+}
+h2.s-title em { color: var(--red2); font-style: italic; }
+h2.s-title .stroke {
+  -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+  color: transparent;
+}
+
+/* ─── SEGMENT / VEÍCULOS ─── */
+#veiculos {
+  padding: 120px 56px;
+  background: var(--black2);
+  position: relative; overflow: hidden; z-index: 1;
+}
+#veiculos::before {
+  content: 'REMAP';
+  position: absolute; right: -40px; top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 220px; color: rgba(204,0,20,0.04);
+  pointer-events: none; user-select: none;
+}
+
+.seg-intro {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: end; margin-bottom: 64px;
+}
+.seg-desc {
+  font-size: 16px; font-weight: 300; color: var(--gray2);
+  line-height: 1.8;
+}
+.seg-desc strong { color: var(--white); font-weight: 600; }
+
+.seg-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.seg-card {
+  background: var(--black3);
+  padding: 36px 28px 32px;
+  position: relative; overflow: hidden;
+  transition: background .25s;
+  border: 1px solid transparent;
+}
+.seg-card:hover {
+  background: var(--black4);
+  border-color: var(--border-red);
+}
+.seg-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--red2);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .35s ease;
+}
+.seg-card:hover::after { transform: scaleX(1); }
+
+.seg-icon {
+  font-size: 36px; margin-bottom: 20px;
+  display: block; line-height: 1;
+  filter: grayscale(0.3);
+  transition: transform .25s;
+}
+.seg-card:hover .seg-icon { transform: scale(1.1) translateY(-2px); }
+
+.seg-card h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 22px; text-transform: uppercase;
+  color: var(--white); margin-bottom: 10px; letter-spacing: .5px;
+}
+.seg-card p {
+  font-size: 13px; font-weight: 300; color: var(--gray);
+  line-height: 1.65;
+}
+.seg-gain {
+  margin-top: 18px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  color: var(--red2);
+  display: flex; align-items: center; gap: 6px;
+}
+.seg-gain::before { content: '↑'; }
+
+/* wide card */
+.seg-card.wide { grid-column: span 2; }
+.seg-card.wide h3 { font-size: 28px; }
+.seg-card.wide .seg-icon { font-size: 44px; }
+
+/* ─── COMO FUNCIONA ─── */
+#como {
+  padding: 120px 56px;
+  position: relative; z-index: 1;
+}
+.steps-wrap {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; margin-top: 64px; position: relative;
+}
+.steps-wrap::before {
+  content: '';
+  position: absolute; top: 36px; left: 12.5%; right: 12.5%;
+  height: 1px; background: var(--border);
+}
+.step {
+  padding: 0 24px 0 0; position: relative;
+}
+.step-num {
+  width: 72px; height: 72px;
+  background: var(--black3);
+  border: 1px solid var(--border-red);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 28px; color: var(--red2);
+  margin-bottom: 28px;
+  position: relative; z-index: 2;
+  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+}
+.step h4 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700; font-size: 18px;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--white); margin-bottom: 10px;
+}
+.step p {
+  font-size: 13px; font-weight: 300; color: var(--gray);
+  line-height: 1.65;
+}
+
+/* ─── PERFIS DE REMAP ─── */
+#perfis {
+  padding: 100px 56px;
+  background: var(--black2);
+  position: relative; z-index: 1;
+}
+.perfis-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 3px; margin-top: 60px;
+}
+.perfil-card {
+  padding: 48px 36px;
+  background: var(--black3);
+  position: relative; overflow: hidden;
+  border: 1px solid var(--border);
+  transition: border-color .25s, transform .25s;
+}
+.perfil-card:hover { border-color: var(--border-red); transform: translateY(-4px); }
+.perfil-card.destaque {
+  background: var(--red2);
+  border-color: var(--red2);
+}
+.perfil-card.destaque:hover { transform: translateY(-4px); border-color: var(--red2); }
+
+.perfil-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--red2); margin-bottom: 8px;
+}
+.perfil-card.destaque .perfil-label { color: rgba(255,255,255,0.7); }
+
+.perfil-card h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 38px; letter-spacing: -1px;
+  text-transform: uppercase; color: var(--white);
+  margin-bottom: 24px; line-height: .95;
+}
+.perfil-bar { height: 3px; background: rgba(255,255,255,0.1); margin-bottom: 24px; position: relative; }
+.perfil-bar-fill { height: 100%; background: var(--red2); }
+.perfil-card.destaque .perfil-bar { background: rgba(255,255,255,0.2); }
+.perfil-card.destaque .perfil-bar-fill { background: var(--white); }
+
+.perfil-stat {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.perfil-stat-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+}
+.perfil-card.destaque .perfil-stat-label { color: rgba(255,255,255,0.7); }
+.perfil-stat-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700; font-size: 16px; color: var(--white);
+}
+.perfil-desc {
+  font-size: 13px; font-weight: 300; color: var(--gray);
+  line-height: 1.6; margin-top: 20px;
+}
+.perfil-card.destaque .perfil-desc { color: rgba(255,255,255,0.75); }
+
+.perfil-badge {
+  position: absolute; top: 20px; right: 20px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.15); color: var(--white);
+  padding: 4px 10px;
+}
+
+/* ─── NÚMEROS ─── */
+#numeros {
+  padding: 0;
+  position: relative; z-index: 1;
+  overflow: hidden;
+}
+.numeros-inner {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--red2);
+}
+.num-block {
+  padding: 60px 40px;
+  border-right: 1px solid rgba(0,0,0,0.2);
+  position: relative; overflow: hidden;
+  text-align: center;
+}
+.num-block:last-child { border-right: none; }
+.num-block::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: rgba(0,0,0,0.2);
+}
+.num-big {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 72px; line-height: 1; color: var(--white);
+}
+.num-big sub {
+  font-size: 36px; vertical-align: baseline; font-style: italic;
+}
+.num-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: rgba(255,255,255,0.65);
+  margin-top: 10px;
+}
+.num-sub {
+  font-size: 12px; color: rgba(255,255,255,0.45);
+  margin-top: 5px; font-weight: 300;
+}
+
+/* ─── TECNOLOGIA IA ─── */
+#tecnologia {
+  padding: 120px 56px;
+  background: var(--black);
+  position: relative; z-index: 1;
+}
+.ia-layout {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: center; margin-top: 64px;
+}
+.ia-visual {
+  position: relative;
+}
+.ia-screen {
+  background: var(--black3);
+  border: 1px solid var(--border-red);
+  padding: 32px;
+  position: relative; overflow: hidden;
+}
+.ia-screen::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--red2), transparent);
+}
+.ia-line {
+  height: 1px; background: var(--border);
+  margin: 16px 0;
+}
+.ia-bar-row { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.ia-bar-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--gray); width: 100px; flex-shrink: 0;
+}
+.ia-bar-track { flex: 1; height: 4px; background: var(--border); position: relative; }
+.ia-bar-fill {
+  height: 100%; background: var(--red2);
+  animation: barAnim 2s ease-in-out infinite alternate;
+}
+@keyframes barAnim { from { opacity: .7; } to { opacity: 1; } }
+.ia-bar-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--white);
+  width: 48px; text-align: right;
+}
+.ia-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.ia-chip {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase;
+  background: var(--red-dim); color: var(--red2);
+  padding: 4px 10px; border: 1px solid var(--border-red);
+}
+.ia-title-screen {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 18px; color: var(--white); text-transform: uppercase;
+}
+.ia-blink {
+  display: inline-block;
+  width: 8px; height: 16px; background: var(--red2);
+  animation: blink .8s step-end infinite;
+  vertical-align: middle; margin-left: 4px;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.ia-features-list {
+  display: flex; flex-direction: column; gap: 24px;
+}
+.ia-feat-item {
+  display: flex; gap: 20px; align-items: flex-start;
+}
+.ia-feat-icon {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: var(--red-dim);
+  border: 1px solid var(--border-red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.ia-feat-text h4 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700; font-size: 16px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--white); margin-bottom: 4px;
+}
+.ia-feat-text p {
+  font-size: 13px; font-weight: 300; color: var(--gray);
+  line-height: 1.6;
+}
+
+/* ─── DEPOIMENTOS ─── */
+#depoimentos {
+  padding: 120px 56px;
+  background: var(--black2);
+  position: relative; z-index: 1;
+}
+.depos-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 3px; margin-top: 64px;
+}
+.depo {
+  background: var(--black3);
+  padding: 40px 32px;
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+  transition: border-color .25s;
+}
+.depo:hover { border-color: var(--border-red); }
+.depo-quote {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 96px; color: rgba(204,0,20,0.1);
+  position: absolute; top: -12px; left: 16px;
+  line-height: 1; pointer-events: none;
+}
+.depo-stars { color: var(--red2); letter-spacing: 2px; margin-bottom: 16px; font-size: 14px; }
+.depo-text {
+  font-size: 15px; font-weight: 300; color: var(--gray2);
+  line-height: 1.7; margin-bottom: 28px;
+  position: relative; z-index: 1;
+}
+.depo-author { display: flex; align-items: center; gap: 14px; }
+.depo-av {
+  width: 46px; height: 46px;
+  background: var(--red-dim); border: 1px solid var(--border-red);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900; font-size: 18px; color: var(--red2);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.depo-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700; font-size: 15px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--white);
+}
+.depo-vehicle { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+/* ─── CTA FINAL ─── */
+#cta {
+  padding: 120px 56px;
+  position: relative; z-index: 1; overflow: hidden;
+}
+#cta::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 700px 500px at 20% 50%, rgba(204,0,20,0.12) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(204,0,20,0.06) 0%, transparent 50%);
+}
+.cta-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: center;
+  position: relative; z-index: 1;
+}
+.cta-left {}
+#cta h2 { margin-bottom: 20px; }
+#cta .cta-sub {
+  font-size: 17px; font-weight: 300; color: var(--gray2);
+  line-height: 1.7; margin-bottom: 40px;
+}
+.cta-whats {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: #25D366; color: var(--white);
+  padding: 16px 36px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; text-decoration: none;
+  transition: background .2s, transform .15s;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+}
+.cta-whats:hover { background: #20BC5A; transform: translateY(-2px); }
+
+.cta-form-box {
+  background: var(--black3);
+  border: 1px solid var(--border);
+  padding: 44px 36px;
+}
+.cta-form-box h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic; font-weight: 900;
+  font-size: 28px; text-transform: uppercase;
+  color: var(--white); margin-bottom: 28px;
+}
+.cta-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.cta-field label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--gray);
+}
+.cta-field input, .cta-field select {
+  background: var(--black2); border: 1px solid var(--border);
+  color: var(--white); padding: 14px 16px;
+  font-family: 'Barlow', sans-serif; font-size: 14px;
+  outline: none; transition: border-color .2s;
+  -webkit-appearance: none;
+}
+.cta-field input::placeholder { color: var(--gray); }
+.cta-field input:focus, .cta-field select:focus { border-color: var(--border-red); }
+.cta-field select option { background: var(--black3); }
+.cta-submit {
+  width: 100%; padding: 16px;
+  background: var(--red2); color: var(--white); border: none;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; cursor: none;
+  margin-top: 8px;
+  transition: background .2s;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+}
+.cta-submit:hover { background: #FF0020; }
+
+/* ─── FOOTER ─── */
+footer {
+  background: var(--black);
+  border-top: 1px solid var(--border);
+  padding: 60px 56px 36px;
+  position: relative; z-index: 1;
+}
+.footer-main {
+  display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 60px; margin-bottom: 48px;
+}
+.footer-brand-desc {
+  font-size: 13px; font-weight: 300; color: var(--gray);
+  line-height: 1.7; margin-top: 16px; max-width: 260px;
+}
+.footer-col h4 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--white);
+  margin-bottom: 20px;
+}
+.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer-col ul a {
+  font-size: 13px; color: var(--gray); text-decoration: none;
+  transition: color .2s;
+}
+.footer-col ul a:hover { color: var(--white); }
+.footer-bottom {
+  border-top: 1px solid var(--border);
+  padding-top: 28px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.footer-bottom p { font-size: 11px; color: var(--gray); }
+.footer-bottom span { color: var(--red2); }
+
+/* ─── ANIMATIONS ─── */
+.reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity .65s ease, transform .65s ease;
+}
+.reveal.visible {
+  opacity: 1; transform: translateY(0);
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1100px) {
+  nav { padding: 0 24px; }
+  .nav-links { display: none; }
+  #hero { grid-template-columns: 1fr; padding: 100px 24px 60px; }
+  .hero-right { align-items: flex-start; margin-top: 40px; }
+  .hero-stat-grid { max-width: 100%; }
+  .seg-grid { grid-template-columns: 1fr 1fr; }
+  .seg-card.wide { grid-column: span 1; }
+  .steps-wrap { grid-template-columns: 1fr 1fr; gap: 40px; }
+  .steps-wrap::before { display: none; }
+  .perfis-grid { grid-template-columns: 1fr; }
+  .numeros-inner { grid-template-columns: 1fr 1fr; }
+  .ia-layout { grid-template-columns: 1fr; }
+  .depos-grid { grid-template-columns: 1fr; }
+  .cta-grid { grid-template-columns: 1fr; }
+  .footer-main { grid-template-columns: 1fr 1fr; }
+  section, #hero, #veiculos, #como, #perfis, #tecnologia, #depoimentos, #cta, footer { padding-left: 24px !important; padding-right: 24px !important; }
+  .seg-intro { grid-template-columns: 1fr; gap: 24px; }
+  .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="logo-svg-wrap">
+    <!-- Chess mark: 3x3, forming stylized P -->
+    <div class="logo-chess">
+      <div class="lc r"></div><div class="lc e"></div><div class="lc e"></div>
+      <div class="lc r"></div><div class="lc r"></div><div class="lc e"></div>
+      <div class="lc e"></div><div class="lc r"></div><div class="lc r"></div>
+    </div>
+    <div class="logo-text-wrap">
+      <span class="logo-paulista">PAULISTA</span>
+      <span class="logo-remap">REMAP<span>////</span>CHIP</span>
+    </div>
+  </div>
+
+  <ul class="nav-links">
+    <li><a href="#veiculos">Veículos</a></li>
+    <li><a href="#como">Como Funciona</a></li>
+    <li><a href="#perfis">Perfis</a></li>
+    <li><a href="#tecnologia">Tecnologia IA</a></li>
+    <li><a href="#depoimentos">Clientes</a></li>
+  </ul>
+  <a href="#cta" class="nav-cta">Agendar Agora</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="hero-bg-text">REMAP</div>
+  <div class="hero-scan"></div>
+
+  <div class="hero-left">
+    <div class="hero-kicker">Primeira IA de Remapeamento da América Latina</div>
+    <h1 class="hero-title">
+      MÁXIMO<br>
+      <em class="line-red">DESEMPENHO</em><br>
+      <span class="line-stroke">PARA TUDO</span><br>
+      <em class="line-red">QUE MOVE.</em>
+    </h1>
+    <p class="hero-sub">
+      Reprogramação eletrônica profissional para <strong>carros, motos, caminhões, barcos, jet ski, máquinas agrícolas e equipamentos pesados</strong>. Tecnologia de IA com precisão de 98,7%.
+    </p>
+    <div class="hero-btns">
+      <a href="#cta" class="btn-red">
+        Diagnóstico Gratuito
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#veiculos" class="btn-outline">Ver Todos os Veículos</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-stat-grid">
+      <div class="hero-stat">
+        <div class="hero-stat-num">+35<em>%</em></div>
+        <div class="hero-stat-label">Ganho de Potência</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">+18<em>%</em></div>
+        <div class="hero-stat-label">Economia Combustível</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">45<em>s</em></div>
+        <div class="hero-stat-label">Análise de ECU pela IA</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">50<em>K+</em></div>
+        <div class="hero-stat-label">Mapas no Sistema</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TICKER ── -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <span class="tick">Carros & SUVs</span>
+    <span class="tick">Motos</span>
+    <span class="tick">Caminhões</span>
+    <span class="tick">Barcos & Jet Ski</span>
+    <span class="tick">Linha Agrícola</span>
+    <span class="tick">Máquinas Pesadas</span>
+    <span class="tick">Ônibus</span>
+    <span class="tick">Vans & Utilitários</span>
+    <span class="tick">Diagnóstico com IA</span>
+    <span class="tick">Remapeamento Profissional</span>
+    <span class="tick">Carros & SUVs</span>
+    <span class="tick">Motos</span>
+    <span class="tick">Caminhões</span>
+    <span class="tick">Barcos & Jet Ski</span>
+    <span class="tick">Linha Agrícola</span>
+    <span class="tick">Máquinas Pesadas</span>
+    <span class="tick">Ônibus</span>
+    <span class="tick">Vans & Utilitários</span>
+    <span class="tick">Diagnóstico com IA</span>
+    <span class="tick">Remapeamento Profissional</span>
+  </div>
+</div>
+
+<!-- ── SEGMENTOS / VEÍCULOS ── -->
+<section id="veiculos">
+  <div class="seg-intro reveal">
+    <div>
+      <div class="s-tag">Segmentos Atendidos</div>
+      <h2 class="s-title">REMAP PARA<br><em>TODO MOTOR</em><br><span class="stroke">QUE EXISTE</span></h2>
+    </div>
+    <p class="seg-desc">
+      Atendemos <strong>todos os tipos de motores</strong> — do carro popular ao trator de grande porte, do jet ski ao caminhão pesado. Nossa plataforma de IA tem mapas otimizados para <strong>mais de 2.500 modelos</strong> e compatibilidade com as principais ECUs do mercado.
+    </p>
+  </div>
+
+  <div class="seg-grid">
+    <div class="seg-card reveal">
+      <span class="seg-icon">🚗</span>
+      <h3>Carros & SUVs</h3>
+      <p>Remapeamento completo para veículos a gasolina, flex, diesel e etanol. Compatível com todas as principais marcas nacionais e importadas.</p>
+      <div class="seg-gain">Até +35% potência / +18% economia</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">🏍️</span>
+      <h3>Motos</h3>
+      <p>Tuning eletrônico para motocicletas esportivas, naked, trail e custom. Mapas personalizados para cada modelo e cilindrada.</p>
+      <div class="seg-gain">Até +28% torque entregue</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">🚛</span>
+      <h3>Caminhões</h3>
+      <p>Reprogramação para caminhões leves, médios e pesados. Foco em economia de combustível e torque para cargas máximas.</p>
+      <div class="seg-gain">−22% consumo em rota</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">🚐</span>
+      <h3>Vans & Ônibus</h3>
+      <p>Remap para transportadoras e empresas de turismo. Redução de custo operacional e maior vida útil do motor.</p>
+      <div class="seg-gain">−20% custo operacional</div>
+    </div>
+    <div class="seg-card wide reveal">
+      <span class="seg-icon">⛵</span>
+      <h3>Barcos & Jet Ski</h3>
+      <p>Reprogramação de motores náuticos de 2 e 4 tempos. Mais aceleração na saída da água, melhor resposta do acelerador e menor consumo em cruzeiro. Compatível com Mercury, Yamaha, Suzuki, Honda e outras marcas líderes do setor náutico.</p>
+      <div class="seg-gain">Melhor resposta + economia em cruzeiro</div>
+    </div>
+    <div class="seg-card wide reveal">
+      <span class="seg-icon">🚜</span>
+      <h3>Linha Agrícola</h3>
+      <p>Tratores, colheitadeiras, plantadeiras e implementos agrícolas. Otimização para trabalho em campo: mais torque na tomada de força, melhor desempenho em diferentes tipos de terreno e redução de consumo nas longas jornadas de trabalho. Atendemos John Deere, Massey Ferguson, Valtra, New Holland e outros.</p>
+      <div class="seg-gain">+Torque na TDF — −combustível no campo</div>
+    </div>
+    <div class="seg-card wide reveal">
+      <span class="seg-icon">🏗️</span>
+      <h3>Máquinas Pesadas & Construção</h3>
+      <p>Escavadeiras, retroescavadeiras, motoniveladoras, pás-carregadeiras e compactadores. Remapeamento focado em produtividade e redução de downtime em obras e mineração. Mapeamos ECUs industriais das principais marcas: Caterpillar, Komatsu, Volvo CE, JCB, Case e Liebherr.</p>
+      <div class="seg-gain">+Produtividade — −paradas não programadas</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">🚌</span>
+      <h3>Linha Pesada Urbana</h3>
+      <p>Ônibus urbanos, articulados e biarticulados. Soluções para frotas de transporte público e concessionárias de BRT.</p>
+      <div class="seg-gain">Frota mais eficiente</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">⚡</span>
+      <h3>Híbridos & Flex</h3>
+      <p>Remapeamento para motores bicombustível e híbridos leves. Calibração específica para cada tipo de combustível.</p>
+      <div class="seg-gain">Calibração 100% personalizada</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">🏁</span>
+      <h3>Preparados & Track</h3>
+      <p>Tuning para competição e pista. Mapas extremos de alta performance para racing, drift e track day com suporte técnico especializado.</p>
+      <div class="seg-gain">Performance máxima liberada</div>
+    </div>
+    <div class="seg-card reveal">
+      <span class="seg-icon">🚁</span>
+      <h3>Equipamentos Especiais</h3>
+      <p>Geradores, grupos motogeradores, empilhadeiras e equipamentos industriais com motor a combustão.</p>
+      <div class="seg-gain">Eficiência industrial</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── COMO FUNCIONA ── -->
+<section id="como">
+  <div class="reveal">
+    <div class="s-tag">Processo</div>
+    <h2 class="s-title">COMO <em>FUNCIONA</em></h2>
+  </div>
+  <div class="steps-wrap">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <h4>Diagnóstico Inicial</h4>
+      <p>Nossa IA lê a ECU do seu veículo em 45 segundos e identifica os parâmetros atuais do motor com precisão de 98,7%.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">02</div>
+      <h4>Análise & Perfil</h4>
+      <p>Com base no diagnóstico e no seu objetivo — economia, potência ou equilibrio — o sistema seleciona o mapa ideal entre 50.000+ opções.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">03</div>
+      <h4>Aplicação do Remap</h4>
+      <p>Técnicos certificados aplicam o remapeamento com equipamentos de última geração. O processo é seguro e reversível.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">04</div>
+      <h4>Validação & Entrega</h4>
+      <p>Testes completos pós-aplicação. Relatório antes/depois com todas as métricas de performance e garantia por escrito.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── PERFIS DE REMAP ── -->
+<section id="perfis">
+  <div class="reveal">
+    <div class="s-tag">Configurações Disponíveis</div>
+    <h2 class="s-title">ESCOLHA SEU<br><em>PERFIL</em></h2>
+  </div>
+  <div class="perfis-grid">
+    <div class="perfil-card reveal">
+      <div class="perfil-label">Perfil 01</div>
+      <h3>ECONÔMICO</h3>
+      <div class="perfil-bar"><div class="perfil-bar-fill" style="width:52%"></div></div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Economia de Combustível</span>
+        <span class="perfil-stat-val">+18%</span>
+      </div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Ganho de Potência</span>
+        <span class="perfil-stat-val">+12%</span>
+      </div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Foco</span>
+        <span class="perfil-stat-val">Eficiência</span>
+      </div>
+      <p class="perfil-desc">Ideal para uso urbano e rodoviário diário. Redução significativa no consumo mantendo a segurança e o conforto. Recomendado para frotas, motoristas de app e usuários de longa distância.</p>
+    </div>
+
+    <div class="perfil-card destaque reveal">
+      <div class="perfil-badge">★ MAIS ESCOLHIDO</div>
+      <div class="perfil-label">Perfil 02</div>
+      <h3>BALANCEADO</h3>
+      <div class="perfil-bar"><div class="perfil-bar-fill" style="width:72%"></div></div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Economia de Combustível</span>
+        <span class="perfil-stat-val">+12%</span>
+      </div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Ganho de Potência</span>
+        <span class="perfil-stat-val">+25%</span>
+      </div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Foco</span>
+        <span class="perfil-stat-val">Melhor dos Dois</span>
+      </div>
+      <p class="perfil-desc">O perfil mais procurado pelos nossos clientes. Equilíbrio perfeito entre performance e economia. Transformação real na dirigibilidade sem abrir mão da eficiência.</p>
+    </div>
+
+    <div class="perfil-card reveal">
+      <div class="perfil-label">Perfil 03</div>
+      <h3>PERFORMANCE</h3>
+      <div class="perfil-bar"><div class="perfil-bar-fill" style="width:95%"></div></div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Ganho de Potência</span>
+        <span class="perfil-stat-val">+35%</span>
+      </div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Torque Máximo</span>
+        <span class="perfil-stat-val">+30%</span>
+      </div>
+      <div class="perfil-stat">
+        <span class="perfil-stat-label">Foco</span>
+        <span class="perfil-stat-val">Máxima Entrega</span>
+      </div>
+      <p class="perfil-desc">Para quem quer extrair o máximo do motor. Aumento expressivo de potência e torque. Indicado para esportivos, track day, competição e quem não aceita limitações de fábrica.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── NÚMEROS ── -->
+<section id="numeros">
+  <div class="numeros-inner">
+    <div class="num-block">
+      <div class="num-big">+35<sub>%</sub></div>
+      <div class="num-label">Potência Máxima</div>
+      <div class="num-sub">Perfil Performance</div>
+    </div>
+    <div class="num-block">
+      <div class="num-big">50<sub>K+</sub></div>
+      <div class="num-label">Mapas no Sistema</div>
+      <div class="num-sub">Atualizado continuamente</div>
+    </div>
+    <div class="num-block">
+      <div class="num-big">98<sub>%</sub></div>
+      <div class="num-label">Precisão da IA</div>
+      <div class="num-sub">Nas recomendações</div>
+    </div>
+    <div class="num-block">
+      <div class="num-big">2.5<sub>K+</sub></div>
+      <div class="num-label">Modelos Compatíveis</div>
+      <div class="num-sub">2010 — 2025</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TECNOLOGIA IA ── -->
+<section id="tecnologia">
+  <div class="reveal">
+    <div class="s-tag">Diferencial Tecnológico</div>
+    <h2 class="s-title">TECNOLOGIA<br><em>DE IA</em> QUE<br>NINGUÉM TEM</h2>
+  </div>
+  <div class="ia-layout">
+    <div class="ia-visual reveal">
+      <div class="ia-screen">
+        <div class="ia-header-row">
+          <div class="ia-chip">● REMAP AI — ATIVO</div>
+          <div class="ia-title-screen">ANALISANDO ECU<div class="ia-blink"></div></div>
+        </div>
+        <div class="ia-line"></div>
+        <div class="ia-bar-row">
+          <span class="ia-bar-label">INJEÇÃO</span>
+          <div class="ia-bar-track"><div class="ia-bar-fill" style="width:87%"></div></div>
+          <span class="ia-bar-val">+31%</span>
+        </div>
+        <div class="ia-bar-row">
+          <span class="ia-bar-label">IGNIÇÃO</span>
+          <div class="ia-bar-track"><div class="ia-bar-fill" style="width:73%"></div></div>
+          <span class="ia-bar-val">+26%</span>
+        </div>
+        <div class="ia-bar-row">
+          <span class="ia-bar-label">TURBO</span>
+          <div class="ia-bar-track"><div class="ia-bar-fill" style="width:95%"></div></div>
+          <span class="ia-bar-val">+35%</span>
+        </div>
+        <div class="ia-bar-row">
+          <span class="ia-bar-label">LAMBDA</span>
+          <div class="ia-bar-track"><div class="ia-bar-fill" style="width:61%"></div></div>
+          <span class="ia-bar-val">ÓTIMO</span>
+        </div>
+        <div class="ia-bar-row">
+          <span class="ia-bar-label">TORQUE</span>
+          <div class="ia-bar-track"><div class="ia-bar-fill" style="width:88%"></div></div>
+          <span class="ia-bar-val">+30%</span>
+        </div>
+        <div class="ia-line"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--red2);letter-spacing:2px;text-transform:uppercase;">
+          ✓ MAPA OTIMIZADO SELECIONADO — 45s
+        </div>
+      </div>
+    </div>
+
+    <div class="ia-features-list reveal">
+      <div class="ia-feat-item">
+        <div class="ia-feat-icon">🧠</div>
+        <div class="ia-feat-text">
+          <h4>Análise de ECU em 45 segundos</h4>
+          <p>Nossa IA lê e interpreta todos os parâmetros da unidade de controle do motor em menos de um minuto, com precisão de 98,7%.</p>
+        </div>
+      </div>
+      <div class="ia-feat-item">
+        <div class="ia-feat-icon">📊</div>
+        <div class="ia-feat-text">
+          <h4>50.000+ Mapas no Banco de Dados</h4>
+          <p>Banco de dados com mapas otimizados para mais de 2.500 modelos de veículos, atualizado continuamente com cada novo serviço.</p>
+        </div>
+      </div>
+      <div class="ia-feat-item">
+        <div class="ia-feat-icon">🔮</div>
+        <div class="ia-feat-text">
+          <h4>Diagnóstico Preditivo</h4>
+          <p>O sistema detecta anomalias na ECU e alerta sobre possíveis falhas antes que aconteçam, economizando em manutenções corretivas.</p>
+        </div>
+      </div>
+      <div class="ia-feat-item">
+        <div class="ia-feat-icon">🔒</div>
+        <div class="ia-feat-text">
+          <h4>Reversível & Seguro</h4>
+          <p>Todo remapeamento é realizado com backup da configuração original. Processo 100% reversível, com garantia por escrito.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── DEPOIMENTOS ── -->
+<section id="depoimentos">
+  <div class="reveal">
+    <div class="s-tag">Clientes Satisfeitos</div>
+    <h2 class="s-title">QUEM JÁ FEZ<br><em>APROVOU</em></h2>
+  </div>
+  <div class="depos-grid">
+    <div class="depo reveal">
+      <div class="depo-quote">"</div>
+      <div class="depo-stars">★★★★★</div>
+      <p class="depo-text">Fiz o remap balanceado no meu Golf GTI e a diferença foi imediata. Mais resposta na aceleração, menos consumo na estrada. A análise de IA foi impressionante — menos de um minuto para saber tudo sobre o motor.</p>
+      <div class="depo-author">
+        <div class="depo-av">MR</div>
+        <div>
+          <div class="depo-name">Marcos Ribeiro</div>
+          <div class="depo-vehicle">VW Golf GTI 2021 — Perfil Balanceado</div>
+        </div>
+      </div>
+    </div>
+    <div class="depo reveal">
+      <div class="depo-quote">"</div>
+      <div class="depo-stars">★★★★★</div>
+      <p class="depo-text">Sou produtor rural e remapeei dois tratores John Deere. Redução de 19% no diesel e muito mais torque na tomada de força. Pagou o investimento em dois meses de safra.</p>
+      <div class="depo-author">
+        <div class="depo-av">JA</div>
+        <div>
+          <div class="depo-name">João Almeida</div>
+          <div class="depo-vehicle">John Deere 5075E — Linha Agrícola</div>
+        </div>
+      </div>
+    </div>
+    <div class="depo reveal">
+      <div class="depo-quote">"</div>
+      <div class="depo-stars">★★★★★</div>
+      <p class="depo-text">Minha lancha com motor Mercury ficou completamente diferente. Saída d'água muito mais agressiva e no cruzeiro reduziu bastante o consumo. Trabalho profissional e sério.</p>
+      <div class="depo-author">
+        <div class="depo-av">RF</div>
+        <div>
+          <div class="depo-name">Roberto Fonseca</div>
+          <div class="depo-vehicle">Lancha com Mercury 250HP — Náutico</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section id="cta">
+  <div class="cta-grid">
+    <div class="cta-left reveal">
+      <div class="s-tag">Agende Agora</div>
+      <h2 class="s-title">PRONTO PARA<br><em>DESBLOQUEAR</em><br><span class="stroke">SEU MOTOR?</span></h2>
+      <p class="cta-sub">
+        Diagnóstico gratuito com nossa IA. Saiba em 45 segundos o potencial real do seu veículo — carro, moto, caminhão, barco, trator ou máquina pesada.
+      </p>
+      <a href="https://wa.me/55" class="cta-whats">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.12 1.523 5.853L0 24l6.305-1.499A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.792 9.792 0 01-5.001-1.374l-.36-.213-3.722.885.928-3.618-.236-.373A9.757 9.757 0 012.182 12C2.182 6.579 6.579 2.182 12 2.182S21.818 6.579 21.818 12 17.421 21.818 12 21.818z"/></svg>
+        Chamar no WhatsApp
+      </a>
+    </div>
+
+    <div class="cta-form-box reveal">
+      <h3>Agendamento Online</h3>
+      <div class="cta-field">
+        <label>Seu Nome</label>
+        <input type="text" placeholder="Nome completo" />
+      </div>
+      <div class="cta-field">
+        <label>WhatsApp</label>
+        <input type="tel" placeholder="(11) 99999-9999" />
+      </div>
+      <div class="cta-field">
+        <label>Tipo de Veículo</label>
+        <select>
+          <option value="" disabled selected>Selecione o tipo</option>
+          <option>Carro / SUV</option>
+          <option>Moto</option>
+          <option>Caminhão</option>
+          <option>Van / Ônibus</option>
+          <option>Barco / Jet Ski</option>
+          <option>Trator / Linha Agrícola</option>
+          <option>Máquina Pesada / Construção</option>
+          <option>Equipamento Industrial</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="cta-field">
+        <label>Objetivo</label>
+        <select>
+          <option value="" disabled selected>O que você busca?</option>
+          <option>Mais economia de combustível</option>
+          <option>Mais potência e performance</option>
+          <option>Equilíbrio (potência + economia)</option>
+          <option>Diagnóstico e correção de falhas</option>
+          <option>Preparação para competição</option>
+        </select>
+      </div>
+      <button class="cta-submit">Solicitar Diagnóstico Gratuito →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-main">
+    <div>
+      <div class="logo-svg-wrap">
+        <div class="logo-chess">
+          <div class="lc r"></div><div class="lc e"></div><div class="lc e"></div>
+          <div class="lc r"></div><div class="lc r"></div><div class="lc e"></div>
+          <div class="lc e"></div><div class="lc r"></div><div class="lc r"></div>
+        </div>
+        <div class="logo-text-wrap">
+          <span class="logo-paulista">PAULISTA</span>
+          <span class="logo-remap">REMAP<span>////</span>CHIP</span>
+        </div>
+      </div>
+      <p class="footer-brand-desc">A primeira automecânica da América Latina com IA integrada ao remapeamento eletrônico. Mais potência, mais economia, mais segurança.</p>
+    </div>
+
+    <div class="footer-col">
+      <h4>Segmentos</h4>
+      <ul>
+        <li><a href="#">Carros & SUVs</a></li>
+        <li><a href="#">Motos</a></li>
+        <li><a href="#">Caminhões</a></li>
+        <li><a href="#">Barcos & Jet Ski</a></li>
+        <li><a href="#">Linha Agrícola</a></li>
+        <li><a href="#">Máquinas Pesadas</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Serviços</h4>
+      <ul>
+        <li><a href="#">Remapeamento ECU</a></li>
+        <li><a href="#">Diagnóstico com IA</a></li>
+        <li><a href="#">Perfil Econômico</a></li>
+        <li><a href="#">Perfil Balanceado</a></li>
+        <li><a href="#">Perfil Performance</a></li>
+        <li><a href="#">Fleet Monitor Pro</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Contato</h4>
+      <ul>
+        <li><a href="#">WhatsApp</a></li>
+        <li><a href="#">Agendamento Online</a></li>
+        <li><a href="#">Falar com Técnico</a></li>
+        <li><a href="#">Parceiros & Franquias</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2026 <span>Paulista Remap Chip</span>. Todos os direitos reservados.</p>
+    <p>Primeira IA de Remapeamento da <span>América Latina</span></p>
+  </div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+  document.querySelectorAll('a, button, .seg-card, .perfil-card, .depo').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.style.width = '28px'; cursor.style.height = '28px'; });
+    el.addEventListener('mouseleave', () => { cursor.style.width = '12px'; cursor.style.height = '12px'; });
+  });
+
+  // Reveal on scroll
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+  // Stagger children in grids
+  const gridObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const items = entry.target.querySelectorAll('.reveal');
+        items.forEach((item, i) => {
+          setTimeout(() => item.classList.add('visible'), i * 100);
+        });
+        gridObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.05 });
+
+  document.querySelectorAll('.seg-grid, .depos-grid, .steps-wrap, .hero-stat-grid').forEach(el => gridObserver.observe(el));
+
+  // Nav active link
+  const sections = document.querySelectorAll('section[id]');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    document.querySelectorAll('.nav-links a').forEach(a => {
+      a.style.color = a.getAttribute('href') === '#' + current ? '#fff' : '';
+    });
+  });
+</script>
+</body>
+</html>
